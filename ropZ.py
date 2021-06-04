@@ -38,7 +38,8 @@ cfg = {
     "(Clean) Neg": r"^neg e.. ; ret",
     "(Clean) Inc": r"^inc e.. ; ret",
     "(Clean) Dec": r"^dec e.. ; ret",
-    "(Clean) Ret": r"^ret  ;",
+    # "(Clean) Ret": r"^ret  ;",
+    "(Clean) Write": r"^mov dword \[e..\], e.. ; ret",
     "Get ESP": r"push esp.*pop e.*ret"
 }
 
@@ -97,7 +98,7 @@ f = open(outname, "w")
 for k, v in cfg.items():
     # Print the current search regexp and all gadgets which
     # were found to match
-    title = "%s gadgets [%d]" % (k, len(v[1]))
+    title  = "%s gadgets [%d]" % (k, len(v[1]))
     print("[+] Found %d \"%s\" gadgets..." % (len(v[1]), k))
     f.write(title + "\n" + "=" * len(title) + "\n")
     for i in range(len(v[1])):
