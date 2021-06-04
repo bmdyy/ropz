@@ -8,9 +8,10 @@
 import sys
 import re
 
-if len(sys.argv) != 2:
-    print("Usage: %s rop.txt" % sys.argv[0])
+if len(sys.argv) != 3:
+    print("Usage: %s rop.txt <output file>" % sys.argv[0])
     print("  -- rop.txt = output from ./rp++ -f ... -r 5 > rop.txt")
+    print("  -- <output file> is where the parsed contains will end up")
     sys.exit(1)
 
 print()
@@ -22,15 +23,23 @@ print()
 # ===== SETTINGS
 
 fname = sys.argv[1] # File which contains rp++ output
-seperator = " => " # Used when outputting gadgets
+outname = sys.argv[2] # File which will contain the new output
+seperator = " | " # Used when outputting gadgets
 max_retn = 0x10 # Highest value for a retn
+ignore_ebp = True # Don't allow gadgets which mess up ebp
 
 cfg = {
-    #"(Clean) Deref": r"^mov e.., dword \[e..\] ; ret",
-    #"(Clean) Swap": r"^xchg e.., e.. ; ret",
-    #"(Clean) Move": r"^mov e.., e.. ; ret",
+    "(Clean) Deref": r"^mov e.., dword \[e..\] ; ret",
+    "(Clean) Swap": r"^xchg e.., e.. ; ret",
+    "(Clean) Move": r"^mov e.., e.. ; ret",
     "(Clean) Add": r"^add e.., e.. ; ret",
-    #"(Clean) Sub": r"^sub e.., e.. ; ret"
+    "(Clean) Sub": r"^sub e.., e.. ; ret",
+    "(Clean) Pop": r"^pop e.. ; ret",
+    "(Clean) Neg": r"^neg e.. ; ret",
+    "(Clean) Inc": r"^inc e.. ; ret",
+    "(Clean) Dec": r"^dec e.. ; ret",
+    "(Clean) Ret": r"^ret  ;",
+    "Get ESP": r"push esp.*pop e.*ret"
 }
 
 # ===== LOAD RP++ OUTPUT
@@ -72,16 +81,32 @@ for gadget in all:
                 if int(gadget[1].split(" ")[-2:][0], 16) > max_retn:
                     continue
 
+            # Ignore the gadgets which mess with ebp
+            if ignore_ebp and "ebp" in gadget[1]:
+                continue
+
             # Add good gadgets to the list
             cfg[k][1].append(gadget)
 
 # ===== DISPLAY RESULTS
 
+# Open the output file
+f = open(outname, "w")
+
 # Loop through the config
 for k, v in cfg.items():
     # Print the current search regexp and all gadgets which
     # were found to match
-    print()
-    print("===== %s gadgets [%d] =====" % (k, len(v[1])))
+    title = "%s gadgets [%d]" % (k, len(v[1]))
+    print("[+] Found %d \"%s\" gadgets..." % (len(v[1]), k))
+    f.write(title + "\n" + "=" * len(title) + "\n")
     for i in range(len(v[1])):
-        print(seperator.join(v[1][i]))
+        f.write(seperator.join(v[1][i]) + "\n")
+    f.write("\n")
+
+# Save the file
+f.flush()
+f.close()
+
+print("[+] Output saved to %s" % outname)
+print()
